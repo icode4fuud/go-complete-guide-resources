@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -8,11 +9,21 @@ import (
 
 const accountBalanceFile = "balance.txt"
 
-func getBalanceFromFile() float64 {
-	data, _ := os.ReadFile(accountBalanceFile)
+func getBalanceFromFile() (float64, error) {
+	data, err := os.ReadFile(accountBalanceFile)
+
+	if err != nil {
+		//place the code that needs to run if an error is returned to make the code more robust
+		return 1000, errors.New("Error reading file")
+	}
+
 	balanceText := string(data)
-	balance, _ := strconv.ParseFloat(balanceText, 64)
-	return balance
+	balance, err := strconv.ParseFloat(balanceText, 64)
+	if err != nil {
+		return 1000, errors.New("Error parsing float")
+	}
+
+	return balance, nil
 }
 
 // add new function that can do basic I/O
@@ -30,7 +41,11 @@ func readBalanceFromFile() {
 }
 
 func main() {
-	var accountBalance float64 = getBalanceFromFile()
+	accountBalance, err := getBalanceFromFile()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
 
 	fmt.Println("Welcome to Go Bank!!!")
 	fmt.Println("What would you like to do today?")
