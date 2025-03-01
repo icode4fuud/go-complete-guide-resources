@@ -11,7 +11,8 @@ func main() {
 	var years float64
 	expectedReturnRate := 5.5
 
-	fmt.Print("Enter the investment amount: ")
+	// fmt.Print("Enter the investment amount: ")
+	outputText("Enter the investment amount: ")
 	fmt.Scan(&investmentAmount)
 
 	fmt.Print("Enter Return Rate: ")
@@ -24,15 +25,20 @@ func main() {
 	futureRealValue := futureValue / math.Pow(1+inflationRate/100, years)
 
 	//outputs to standard output
-	//fmt.Println("Future Value:", futureValue)
-	//fmt.Printf("Future Value: %.2f\n", futureValue)
-	fmt.Printf("Future Value: %.02f\nFuture Value(adjusted for inflation): %.02f", futureValue, futureRealValue)
+	fmt.Println("Future Value:", futureValue)
+	fmt.Printf("Future Value: %.2f\n", futureValue)
+	//fmt.Printf("Future Value: %.02f\nFuture Value(adjusted for inflation): %.02f", futureValue, futureRealValue)
 	//fmt.Printf("Future Value: %v\nFuture Value(adjusted for inflation): %v", futureValue, futureRealValue)
-	//fmt.Println("Future Real Value (adjusted for inflation):", futureRealValue)
+	fmt.Println("Future Real Value (adjusted for inflation):", futureRealValue)
 
 	//outputing fomatted string
-	formattedFB := fmt.Sprintf("Future Value: %.02f\n", futureValue)
-	formattedFRV := fmt.Sprintf("Future Value(adjusted for inflation): %.02f", futureRealValue)
-	fmt.Print(formattedFB, formattedFRV)
+	// formattedFB := fmt.Sprintf("Future Value: %.02f\n", futureValue)
+	// formattedFRV := fmt.Sprintf("Future Value(adjusted for inflation): %.02f", futureRealValue)
+	// fmt.Print(formattedFB, formattedFRV)
 
+}
+
+// create a function example
+func outputText(text string) {
+	fmt.Print(text)
 }
