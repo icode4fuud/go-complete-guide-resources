@@ -30,4 +30,9 @@ func main() {
 	//fmt.Printf("Future Value: %v\nFuture Value(adjusted for inflation): %v", futureValue, futureRealValue)
 	//fmt.Println("Future Real Value (adjusted for inflation):", futureRealValue)
 
+	//outputing fomatted string
+	formattedFB := fmt.Sprintf("Future Value: %.02f\n", futureValue)
+	formattedFRV := fmt.Sprintf("Future Value(adjusted for inflation): %.02f", futureRealValue)
+	fmt.Print(formattedFB, formattedFRV)
+
 }
