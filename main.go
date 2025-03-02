@@ -33,6 +33,12 @@ type ouputtable interface {
 
 // start main
 func main() {
+
+	//exemplify using printSomething function
+	printSomething("Hello, World!")
+	printSomething(42)
+	printSomething(3.14159)
+
 	title, content := getNoteData()
 	todoText := getUserInput("Todo text:")
 
@@ -75,6 +81,12 @@ func main() {
 }
 
 //end main
+
+// by using interface type it specifies that the value can be of any type as long as it implements the interface
+// this is useful when you want to pass a value to a function that can be of any type as long as it implements the interface
+func printSomething(value interface{}) {
+	fmt.Println(value)
+}
 
 // add a method to replace duplication of Display method and Save method
 func outputData(data ouputtable) error {
