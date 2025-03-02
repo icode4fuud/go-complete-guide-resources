@@ -27,17 +27,25 @@ func (u *user) clearUserDetails() {
 	u.birthDate = ""
 }
 
+// creation/constructor function which is a utlity for creating a struct
+// by convention precede the struct name w/ new
+func newUser(firstName, lastName, birthDate string) *user {
+	return &user{
+		firstName: firstName,
+		lastName:  lastName,
+		birthDate: birthDate,
+		createdAt: time.Now(),
+	}
+}
+
 func main() {
 	userFirstName := getUserData("Please enter your first name: ")
 	userLastName := getUserData("Please enter your last name: ")
 	userbirthDate := getUserData("Please enter your birthdate (MM/DD/YYYY): ")
 
-	appUser := user{
-		firstName: userFirstName,
-		lastName:  userLastName,
-		birthDate: userbirthDate,
-		createdAt: time.Now(),
-	}
+	var appUser *user
+
+	appUser = newUser(userFirstName, userLastName, userbirthDate)
 
 	// ... do something awesome with that gathered data!
 	// now using the receiver method w/o any arguments
