@@ -20,6 +20,15 @@ func main() {
 		return
 	}
 
+	admin := user.Admin{
+		Email:    "development@iragordon.com",
+		Password: "password",
+		User:     *appUser,
+	}
+
+	// Use the admin variable to avoid the "declared and not used" error
+	fmt.Printf("Admin Email: %s\n", admin.Email)
+
 	// ... do something awesome with that gathered data!
 	// now using the receiver method w/o any arguments
 	appUser.OutputUserDetails()

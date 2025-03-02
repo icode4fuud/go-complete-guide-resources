@@ -13,6 +13,13 @@ type User struct {
 	CreatedAt time.Time
 }
 
+// Admin struct which embeds the User struct
+type Admin struct {
+	Email    string
+	Password string
+	User
+}
+
 // now attach outputUserDetails to the user struct
 // u user is a receiver argument
 // func (u *user) outputUserDetails() { //<= can use a pointer here as the pointer for more efficiency
@@ -25,6 +32,24 @@ func (u *User) ClearUserDetails() {
 	u.FirstName = ""
 	u.LastName = ""
 	u.BirthDate = ""
+}
+
+func NewAdmin(email, password, firstName, lastName, birthDate string) (*Admin, error) {
+	//add validation steps
+	if email == "" || password == "" || firstName == "" || lastName == "" || birthDate == "" {
+		return nil, fmt.Errorf("missing required fields")
+	}
+
+	return &Admin{
+		Email:    email,
+		Password: password,
+		User: User{
+			FirstName: firstName,
+			LastName:  lastName,
+			BirthDate: birthDate,
+			CreatedAt: time.Now(),
+		},
+	}, nil
 }
 
 // creation/constructor function which is a utlity for creating a struct
