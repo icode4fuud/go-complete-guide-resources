@@ -84,14 +84,35 @@ func main() {
 
 // using Switch statement to determine the type of the value
 func printSomething(value interface{}) {
-	switch value.(type) {
-	case string:
-		fmt.Println("String:", value)
-	case int:
-		fmt.Println("Integer:", value)
-	case float64:
-		fmt.Println("Float64:", value)
+	intVal, ok := value.(int)
+
+	if ok {
+		fmt.Println("Int:", intVal)
+		return
 	}
+
+	floatVal, ok := value.(float64)
+
+	if ok {
+		fmt.Println("Float64:", floatVal)
+		return
+	}
+
+	stringVal, ok := value.(string)
+
+	if ok {
+		fmt.Println("String:", stringVal)
+		return
+	}
+
+	// switch value.(type) {
+	// case string:
+	// 	fmt.Println("String:", value)
+	// case int:
+	// 	fmt.Println("Integer:", value)
+	// case float64:
+	// 	fmt.Println("Float64:", value)
+	// }
 	fmt.Println(value)
 }
 
