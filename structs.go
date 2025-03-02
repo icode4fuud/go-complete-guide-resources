@@ -29,13 +29,18 @@ func (u *user) clearUserDetails() {
 
 // creation/constructor function which is a utlity for creating a struct
 // by convention precede the struct name w/ new
-func newUser(firstName, lastName, birthDate string) *user {
+func newUser(firstName, lastName, birthDate string) (*user, error) {
+	//add validation steps
+	if firstName == "" || lastName == "" || birthDate == "" {
+		return nil, fmt.Errorf("missing required fields")
+	}
+
 	return &user{
 		firstName: firstName,
 		lastName:  lastName,
 		birthDate: birthDate,
 		createdAt: time.Now(),
-	}
+	}, nil
 }
 
 func main() {
@@ -45,7 +50,12 @@ func main() {
 
 	var appUser *user
 
-	appUser = newUser(userFirstName, userLastName, userbirthDate)
+	appUser, err := newUser(userFirstName, userLastName, userbirthDate)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	// ... do something awesome with that gathered data!
 	// now using the receiver method w/o any arguments
@@ -57,6 +67,6 @@ func main() {
 func getUserData(promptText string) string {
 	fmt.Print(promptText)
 	var value string
-	fmt.Scan(&value)
+	fmt.Scanln(&value)
 	return value
 }
