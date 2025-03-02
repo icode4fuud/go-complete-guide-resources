@@ -82,9 +82,16 @@ func main() {
 
 //end main
 
-// by using interface type it specifies that the value can be of any type as long as it implements the interface
-// this is useful when you want to pass a value to a function that can be of any type as long as it implements the interface
+// using Switch statement to determine the type of the value
 func printSomething(value interface{}) {
+	switch value.(type) {
+	case string:
+		fmt.Println("String:", value)
+	case int:
+		fmt.Println("Integer:", value)
+	case float64:
+		fmt.Println("Float64:", value)
+	}
 	fmt.Println(value)
 }
 
