@@ -17,12 +17,14 @@ type user struct {
 // u user is a receiver argument
 // func (u *user) outputUserDetails() { //<= can use a pointer here as the pointer for more efficiency
 func (u user) outputUserDetails() {
-	//dereference to perform data mutation
-	// (*u).firstName = "John"
-	// (*u).lastName = "Doe"
-	// (*u).birthDate = "01/01/1970"
-
 	fmt.Println(u.firstName, u.lastName, u.birthDate)
+}
+
+// must dereference the pointer to the struct so no extra memory is used
+func (u *user) clearUserDetails() {
+	u.firstName = ""
+	u.lastName = ""
+	u.birthDate = ""
 }
 
 func main() {
@@ -38,9 +40,9 @@ func main() {
 	}
 
 	// ... do something awesome with that gathered data!
-	// now passing a pointer instead of an unnecessary copy
-	//outputUserDetails(&appUser)
 	// now using the receiver method w/o any arguments
+	appUser.outputUserDetails()
+	appUser.clearUserDetails()
 	appUser.outputUserDetails()
 }
 
