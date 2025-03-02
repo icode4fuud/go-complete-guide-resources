@@ -12,17 +12,21 @@ const accountBalanceFile = "balance.txt"
 func getBalanceFromFile() (float64, error) {
 	data, err := os.ReadFile(accountBalanceFile)
 
+	//check for nil; nil stands for the absence of a usefule value
+	//nil is a special value in Go that represents the absence of a useful value
 	if err != nil {
 		//place the code that needs to run if an error is returned to make the code more robust
-		return 1000, errors.New("Error reading file")
+		//also a place to return some custom error message
+		return 74587, errors.New("Error reading file")
 	}
 
 	balanceText := string(data)
 	balance, err := strconv.ParseFloat(balanceText, 64)
 	if err != nil {
-		return 1000, errors.New("Error parsing float")
+		return 74587, errors.New("Error parsing float")
 	}
 
+	//return the balance and nil to indicate that there is no error
 	return balance, nil
 }
 
@@ -42,9 +46,13 @@ func readBalanceFromFile() {
 
 func main() {
 	accountBalance, err := getBalanceFromFile()
+
 	if err != nil {
 		fmt.Println("Error:", err)
-		return
+		fmt.Println("_______")
+		//panic will end applicaiton execution and print out a error message
+		panic("Error reading balance from file")
+		//return
 	}
 
 	fmt.Println("Welcome to Go Bank!!!")
