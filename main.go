@@ -10,10 +10,28 @@ import (
 	"example.com/note/todo"
 )
 
+// by convention if the interface has only one method, the name of the interface should be the method name with -er suffix
+// e.g. Saver interface
 type saver interface {
-	Save(int, string) error
+	Save() error
 }
 
+type displayer interface {
+	Display()
+}
+
+// add an interface to accommodate both save and display methods but the better implementation is to embed the interfaces
+//
+//	type ouputtable interface {
+//		Save() error
+//		Display()
+//	}
+type ouputtable interface {
+	saver // embed the saver interface
+	Display()
+}
+
+// start main
 func main() {
 	title, content := getNoteData()
 	todoText := getUserInput("Todo text:")
@@ -33,31 +51,49 @@ func main() {
 	}
 
 	//call todo Display and Save
-	todo.Display()
-	err = todo.Save()
+	// todo.Display()
+	// err = saveData(todo) // saveData(todo) replaces todo.Save()
+	//^simplify the code by using outputtable
+	err = outputData(todo)
 
 	if err != nil {
 		fmt.Println("Saving the todo failed.")
 		return
 	}
 
-	fmt.Println("Saving the todo succeeded!")
+	// userNote.Display()
+	// err = saveData(userNote) // saveData(userNote) replaces userNote.Save()
+	//^simplify the code by using outputtable
+	outputData(userNote)
 
-	userNote.Display()
-	err = userNote.Save()
+	//not needed
+	// if err != nil {
+	// 	fmt.Println("Saving the note failed.")
+	// 	return
+	// }
 
-	if err != nil {
-		fmt.Println("Saving the note failed.")
-		return
-	}
-
-	fmt.Println("Saving the note succeeded!")
 }
 
-//directly call in the main function and shrink down the code
-// func getTodoData() string {
-// 	return getUserInput("Todo text:")
-// }
+//end main
+
+// add a method to replace duplication of Display method and Save method
+func outputData(data ouputtable) error {
+	data.Display()
+	return saveData(data)
+}
+
+// add SaveData function to replace repetitive code
+func saveData(data saver) error {
+	err := data.Save()
+
+	if err != nil {
+		fmt.Println("Saving the data failed.")
+		return err
+	}
+
+	fmt.Println("Saving the data succeeded!")
+	return nil
+}
 
 func getNoteData() (string, string) {
 	title := getUserInput("Note title:")
