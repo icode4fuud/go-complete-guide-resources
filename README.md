@@ -11,7 +11,14 @@ The [/attachments](/attachments/) folder contains lecture-specific attachments (
 The [/other](/other/) folder contains other resources - e.g, the course slides.
 
 # Golang for gRPC Communication Pattern
+choco install protoc
+
+https://protobuf.dev/installation/
+PB_REL="https://github.com/protocolbuffers/protobuf/releases"
+curl -LO $PB_REL/download/v< param protoc-version >/protoc-< param protoc-version >-linux-x86_64.zip
+
 protoc --go_out=. --go-grpc_out=. greeter.proto
+go get -u google.golang.org/grpc
 
 Clipped from: https://chat.deepseek.com/a/chat/s/56655ea0-54ef-42f2-b10f-8234599e864c
 Q: Give me an example of a Golang route for gRPC communication pattern
