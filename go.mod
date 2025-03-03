@@ -1,3 +1,3 @@
-module ig4llc.com/functions
+module ig4llc.com/recursion
 
 go 1.24.0
