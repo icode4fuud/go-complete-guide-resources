@@ -1,18 +1,22 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
+
+//type transformfn func(int) int
 
 func main() {
 	numbers := []int{1, 2, 3}
-	doubled := transformNumbers(&numbers, double)
-	tripled := transformNumbers(&numbers, triple)
 
-	fmt.Println(doubled)
-	fmt.Println(tripled)
+	//creating an anonymous function
+	// anonymous functions are useful when you want to create a function that is only used once
+	// and you don't want to give it a name
+	transformed := transformNumbers(&numbers, func(number int) int {
+		return number * 2
+	})
 
-	//transformed := transformNumbers(&numbers, ???)
-
-	//fmt.Println(transformed)
+	fmt.Println(transformed)
 }
 
 func transformNumbers(numbers *[]int, transform func(int) int) []int {
@@ -23,12 +27,4 @@ func transformNumbers(numbers *[]int, transform func(int) int) []int {
 	}
 
 	return dNumbers
-}
-
-func double(number int) int {
-	return number * 2
-}
-
-func triple(number int) int {
-	return number * 3
 }
