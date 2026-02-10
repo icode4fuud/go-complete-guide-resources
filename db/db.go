@@ -1,58 +1,53 @@
 package db
 
+//Why this version of db.go is better:
+// No shadowing
+// Ping verifies the DB is actually usable
+// Errors bubble up instead of panicking
+// Logging gives you visibility
+// Migrations are separated cleanly
+
 import (
 	"database/sql"
-	"os"
+	"fmt"
+	"log"
+	"time"
 
 	_ "modernc.org/sqlite"
 )
 
-// global variable; uppercase makes it public access modifier
 var DB *sql.DB
 
-// initalize the database
-func InitDB() {
-	DB, err := sql.Open("sqlite", "api.db")
+func InitDB() error {
+	var err error
 
+	DB, err = sql.Open("sqlite", "api.db")
 	if err != nil {
-		panic("Could not connect to database")
+		return fmt.Errorf("failed to open database: %w", err)
 	}
 
-	//configure connection pooling to control how many open cnxn are allowed
 	DB.SetMaxOpenConns(10)
-	DB.SetMaxIdleConns(5) // how many cnxn we want to keep open if noone is using a cnxn
+	DB.SetMaxIdleConns(5)
+	DB.SetConnMaxLifetime(time.Hour)
 
-	//call createTables() inside InitDB() so your schema exist before queries run
-	//Microsoft Copilot is wrong here, this line causes an error
-	//createTables()
-}
-
-func createTables() {
-	// createEventsTable := `
-	// CREATE TABLE IF NOT EXISTS events (
-	// 	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	// 	name TEXT NOT NULL,
-	// 	datetime TEXT NOT NULL,
-	// 	location TEXT NOT NULL,
-	// 	description TEXT NOT NULL,
-	// 	user_id INTEGER NOT NULL
-	// )`
-
-	//read table schema from .sql file
-	schema, err := os.ReadFile("DDL_GO_SCHEMA.sql")
-	if err != nil {
-		panic("Could not read schema file: " + err.Error())
+	// Verify the connection
+	if err := DB.Ping(); err != nil {
+		return fmt.Errorf("database ping failed: %w", err)
 	}
 
-	_, err = DB.Exec(string(schema))
+	log.Println("[DB] Connected successfully")
 
-	if err != nil {
-		panic("Could not create events table: " + err.Error())
-	} else {
-		println("Events table created successfully")
+	// Run schema setup
+	if err := RunMigrations(); err != nil {
+		return fmt.Errorf("migration error: %w", err)
 	}
+
+	return nil
 }
 
 func CloseDB() {
-	DB.Close()
+	if DB != nil {
+		DB.Close()
+		log.Println("[DB] Connection closed")
+	}
 }
