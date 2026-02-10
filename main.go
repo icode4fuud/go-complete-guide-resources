@@ -4,10 +4,14 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"ig4llc.com/db"
 	"ig4llc.com/models"
 )
 
 func main() {
+	db.InitDB()
+	defer db.CloseDB()
+
 	server := gin.Default()
 
 	//register endpoints as a handler for http request
