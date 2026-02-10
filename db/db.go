@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"os"
 
 	_ "modernc.org/sqlite"
 )
@@ -27,20 +28,28 @@ func InitDB() {
 }
 
 func createTables() {
-	createEventsTable := `
-	CREATE TABLE IF NOT EXISTS events (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		name TEXT NOT NULL,
-		datetime TEXT NOT NULL,
-		location TEXT NOT NULL,
-		description TEXT NOT NULL,
-		user_id INTEGER NOT NULL
-	)`
+	// createEventsTable := `
+	// CREATE TABLE IF NOT EXISTS events (
+	// 	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	// 	name TEXT NOT NULL,
+	// 	datetime TEXT NOT NULL,
+	// 	location TEXT NOT NULL,
+	// 	description TEXT NOT NULL,
+	// 	user_id INTEGER NOT NULL
+	// )`
 
-	_, err := DB.Exec(createEventsTable)
+	//read table schema from .sql file
+	schema, err := os.ReadFile("DDL_GO_SCHEMA.sql")
+	if err != nil {
+		panic("Could not read schema file: " + err.Error())
+	}
+
+	_, err = DB.Exec(string(schema))
 
 	if err != nil {
-		panic("Could not create events table")
+		panic("Could not create events table: " + err.Error())
+	} else {
+		println("Events table created successfully")
 	}
 }
 
