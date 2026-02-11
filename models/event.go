@@ -20,9 +20,15 @@ type Event struct {
 type EventRepository interface {
 	Create(e *Event) error
 	GetAll() ([]Event, error)
+	GetByID(id int64) (*Event, error)
+	Update(e *Event) error
+	Delete(id int64) error
 }
 
 type EventService interface {
 	CreateEvent(e *Event) error
 	GetAllEvents() ([]Event, error)
+	GetEventByID(id int64) (*Event, error)
+	UpdateEvent(e *Event) error
+	DeleteEvent(id int64) error
 }

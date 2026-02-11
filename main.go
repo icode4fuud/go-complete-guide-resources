@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 	"ig4llc.com/db"
 	"ig4llc.com/models"
@@ -27,7 +29,8 @@ func main() {
 	server := gin.Default()
 
 	//register endpoints as a handler for http request
-	server.GET("/events", getEvents) //GET, POST, PUT, PATCH, DELETE
+	server.GET("/events", getEvents)    //GET, POST, PUT, PATCH, DELETE
+	server.GET("/events/:id", getEvent) // events/1, events/5
 	server.POST("/events", createEvent)
 
 	server.Run(":8081") // localhost:8081
@@ -43,6 +46,24 @@ func getEvents(context *gin.Context) {
 	}
 
 	context.JSON(http.StatusOK, events)
+}
+
+func getEvent(c *gin.Context) {
+	idStr := c.Param("id")
+
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid event ID"})
+		return
+	}
+
+	event, err := eventService.GetEventByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Event not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, event)
 }
 
 func createEvent(context *gin.Context) {

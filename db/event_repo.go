@@ -58,3 +58,17 @@ func (r *EventRepo) GetAll() ([]models.Event, error) {
 	}
 	return events, rows.Err()
 }
+
+func (r *EventRepo) GetByID(id int64) (*models.Event, error) {
+	row := r.db.QueryRow("SELECT * FROM events WHERE id = ?", id)
+
+	var e models.Event
+	var dt string
+
+	if err := row.Scan(&e.ID, &e.Name, &dt, &e.Location, &e.Description, &e.UserID); err != nil {
+		return nil, err
+	}
+	t, _ := time.Parse(time.RFC3339, dt)
+	e.DateTime = t
+	return &e, nil
+}
