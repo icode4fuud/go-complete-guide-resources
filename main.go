@@ -20,6 +20,7 @@ func main() {
 
 	//initialize the the repo
 	eventRepo = db.NewEventRepo()
+
 	server := gin.Default()
 
 	//register endpoints as a handler for http request

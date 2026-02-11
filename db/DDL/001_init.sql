@@ -6,3 +6,9 @@ CREATE TABLE IF NOT EXISTS events (
     description TEXT NOT NULL,
     user_id INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    version TEXT NOT NULL UNIQUE,
+    applied_at TEXT NOT NULL
+);
