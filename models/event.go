@@ -21,3 +21,8 @@ type EventRepository interface {
 	Create(e *Event) error
 	GetAll() ([]Event, error)
 }
+
+type EventService interface {
+	CreateEvent(e *Event) error
+	GetAllEvents() ([]Event, error)
+}

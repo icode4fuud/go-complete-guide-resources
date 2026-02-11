@@ -7,8 +7,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"ig4llc.com/db"
 	"ig4llc.com/models"
+	"ig4llc.com/services"
 )
 
+var eventService *services.EventService
 var eventRepo *db.EventRepo
 
 func main() {
@@ -18,8 +20,9 @@ func main() {
 	}
 	defer db.CloseDB()
 
-	//initialize the the repo
+	//initialize the the repo & service layer <= service layer references the repository layer
 	eventRepo = db.NewEventRepo()
+	eventService = services.NewEventService(eventRepo)
 
 	server := gin.Default()
 
@@ -30,9 +33,10 @@ func main() {
 	server.Run(":8081") // localhost:8081
 }
 
+// handlers
 func getEvents(context *gin.Context) {
 
-	events, err := eventRepo.GetAll()
+	events, err := eventService.GetAllEvents()
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 		return
@@ -52,8 +56,10 @@ func createEvent(context *gin.Context) {
 
 	event.ID = 1
 	event.UserID = 1
-	//err = event.Save()
-	if err := eventRepo.Create(&event); err != nil {
+
+	//Evolution of Go project structure/architecture
+	//err = event.Save() 1st from Udemy
+	if err := eventService.CreateEvent(&event); err != nil {
 		context.JSON(http.StatusBadRequest, gin.H{"message": "Failed to INSERT INTO database!"})
 		return
 	}
