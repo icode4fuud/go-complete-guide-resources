@@ -9,6 +9,8 @@ import (
 	"ig4llc.com/models"
 )
 
+var eventRepo *db.EventRepo
+
 func main() {
 	if err := db.InitDB(); err != nil {
 		//panic(err)
@@ -16,6 +18,8 @@ func main() {
 	}
 	defer db.CloseDB()
 
+	//initialize the the repo
+	eventRepo = db.NewEventRepo()
 	server := gin.Default()
 
 	//register endpoints as a handler for http request
@@ -27,7 +31,7 @@ func main() {
 
 func getEvents(context *gin.Context) {
 
-	events, err := models.GetAllEvents()
+	events, err := eventRepo.GetAll()
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 		return
@@ -47,7 +51,11 @@ func createEvent(context *gin.Context) {
 
 	event.ID = 1
 	event.UserID = 1
-	err = event.Save()
+	//err = event.Save()
+	if err := eventRepo.Create(&event); err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{"message": "Failed to INSERT INTO database!"})
+		return
+	}
 
 	if err != nil {
 		context.JSON(http.StatusBadRequest, gin.H{"message": "Could not create event. Try again later."}) //err.Error()
