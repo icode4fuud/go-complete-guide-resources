@@ -1,10 +1,10 @@
 package services
 
-import(
-	ig4llc.com/db
+import (
+	"ig4llc.com/models"
 )
 
-type EventService interface { 
-	CreateEvent(e *Event) error 
-	GetAllEvents() ([]Event, error) 
+type EventService interface {
+	CreateEvent(e *models.Event) error
+	GetAllEvents() ([]models.Event, error)
 }
