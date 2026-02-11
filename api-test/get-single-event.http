@@ -1,0 +1,2 @@
+GET http://localhost:8081/events/11
+content-type: application/json; charset=utf-8

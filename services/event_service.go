@@ -26,3 +26,7 @@ func (s *EventService) CreateEvent(e *models.Event) error {
 func (s *EventService) GetAllEvents() ([]models.Event, error) {
 	return s.repo.GetAll()
 }
+
+func (s *EventService) GetEventByID(id int64) (*models.Event, error) {
+	return s.repo.GetByID(id)
+}
