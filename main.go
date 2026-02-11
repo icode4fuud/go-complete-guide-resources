@@ -15,6 +15,8 @@ import (
 var eventService *services.EventService
 var eventRepo *db.EventRepo
 
+//const baseuri = "/events"
+
 func main() {
 	if err := db.InitDB(); err != nil {
 		//panic(err)
@@ -32,6 +34,10 @@ func main() {
 	server.GET("/events", getEvents)    //GET, POST, PUT, PATCH, DELETE
 	server.GET("/events/:id", getEvent) // events/1, events/5
 	server.POST("/events", createEvent)
+	server.POST("/events/:id/register", registerEvent)
+	server.PUT("/events/:id", updateEvent)
+	server.DELETE("/events/:id", deleteEvent)
+	server.DELETE("/events/:id/register", unregisterEvent)
 
 	server.Run(":8081") // localhost:8081
 }
@@ -91,4 +97,76 @@ func createEvent(context *gin.Context) {
 	}
 
 	context.JSON(http.StatusCreated, gin.H{"message": "Event created", "event": event})
+}
+
+func registerEvent(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid event ID"})
+		return
+	}
+
+	if err := eventService.RegisterUserForEvent(id, 1); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "User registered for event"})
+}
+
+func updateEvent(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid event ID"})
+		return
+	}
+
+	var event models.Event
+	if err := c.ShouldBindJSON(&event); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid event payload"})
+		return
+	}
+
+	event.ID = id
+
+	if err := eventService.UpdateEvent(&event); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Event updated", "event": event})
+}
+
+func deleteEvent(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid event ID"})
+		return
+	}
+
+	if err := eventService.DeleteEvent(id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Event deleted"})
+}
+
+func unregisterEvent(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid event ID"})
+		return
+	}
+
+	if err := eventService.UnregisterUserFromEvent(id, 1); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "User unregistered from event"})
 }

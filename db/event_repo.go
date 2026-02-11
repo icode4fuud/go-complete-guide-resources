@@ -72,3 +72,33 @@ func (r *EventRepo) GetByID(id int64) (*models.Event, error) {
 	e.DateTime = t
 	return &e, nil
 }
+
+func (r *EventRepo) Register(eventID int64, userID int) error {
+	_, err := r.db.Exec(`
+        INSERT INTO registrations (event_id, user_id)
+        VALUES (?, ?)
+    `, eventID, userID)
+	return err
+}
+
+func (r *EventRepo) Unregister(eventID int64, userID int) error {
+	_, err := r.db.Exec(`
+        DELETE FROM registrations
+        WHERE event_id = ? AND user_id = ?
+    `, eventID, userID)
+	return err
+}
+
+func (r *EventRepo) Update(e *models.Event) error {
+	_, err := r.db.Exec(`
+        UPDATE events
+        SET name = ?, datetime = ?, location = ?, description = ?
+        WHERE id = ?
+    `, e.Name, e.DateTime.Format(time.RFC3339), e.Location, e.Description, e.ID)
+	return err
+}
+
+func (r *EventRepo) Delete(id int64) error {
+	_, err := r.db.Exec(`DELETE FROM events WHERE id = ?`, id)
+	return err
+}
