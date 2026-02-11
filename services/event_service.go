@@ -30,3 +30,19 @@ func (s *EventService) GetAllEvents() ([]models.Event, error) {
 func (s *EventService) GetEventByID(id int64) (*models.Event, error) {
 	return s.repo.GetByID(id)
 }
+
+func (s *EventService) RegisterUserForEvent(eventID int64, userID int) error {
+	return s.repo.Register(eventID, userID)
+}
+
+func (s *EventService) UnregisterUserFromEvent(eventID int64, userID int) error {
+	return s.repo.Unregister(eventID, userID)
+}
+
+func (s *EventService) UpdateEvent(e *models.Event) error {
+	return s.repo.Update(e)
+}
+
+func (s *EventService) DeleteEvent(id int64) error {
+	return s.repo.Delete(id)
+}
