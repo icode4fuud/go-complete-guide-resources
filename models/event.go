@@ -1,11 +1,10 @@
 package models
 
-//have all the logic that deals with storing event data
+//have all the logic that deals with storing event data (Udemy)
+// Decouple HTTP from persistence. Microsoft Copilot
 
 import (
 	"time"
-
-	"ig4llc.com/db"
 )
 
 // Event struct
@@ -18,54 +17,7 @@ type Event struct {
 	UserID      int
 }
 
-var events []Event = []Event{}
-
-func (e Event) Save() error {
-	query :=
-		`INSERT INTO events (name, datetime, location, description, user_id) 
-	VALUES (?, ?, ?, ?, ?)`
-
-	stmt, err := db.DB.Prepare(query)
-	if err != nil {
-		return err
-	}
-
-	defer stmt.Close()
-
-	result, err := stmt.Exec(e.Name, e.DateTime, e.Location, e.Description, e.UserID)
-	if err != nil {
-		return err
-	}
-
-	id, err := result.LastInsertId()
-	e.ID = int64(id)
-	return err
-
-	//later will add to a database
-	//events = append(events, e)
-}
-
-func GetAllEvents() ([]Event, error) {
-	query := `SELECT * FROM events`
-	rows, err := db.DB.Query(query)
-	if err != nil {
-		return nil, err
-	}
-
-	defer rows.Close()
-
-	var events []Event
-	for rows.Next() {
-		var event Event
-		//pass a pointer(&)
-		rows.Scan(&event.ID, &event.Name, &event.DateTime, &event.Location, &event.Description, &event.UserID)
-
-		if err != nil {
-			return nil, err
-		}
-
-		events = append(events, event)
-	}
-
-	return events, nil
+type EventRepository interface {
+	Create(e *Event) error
+	GetAll() ([]Event, error)
 }
