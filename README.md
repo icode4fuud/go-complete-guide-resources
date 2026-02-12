@@ -1,11 +1,16 @@
 # Go - The Complete Guide
 
-This repository contains course resources (code snapshots, slides) for my [Go - The Complete Guide course](https://acad.link/golang).
+# How to search file content in Linux/Bash
+1. grep -R "ig4llc.com/db" .
 
-## How To Use
+# How to search file content in Windows/Powershell
+1. Get-ChildItem -Recurse -Filter *.go | Select-String "ig4llc.com/db"
 
-The [/code](/code/) folder contains multiple code snapshots for every course sections. You can use the code stored in that folder to compare your code to mine in case you're getting stuck when following along with the course.
 
-The [/attachments](/attachments/) folder contains lecture-specific attachments (i.e., files which are directly attached to individual course lectures) like starting project snapshots.
+# To run the app and the migrations use the following command
+go run ./cmd/api
+go run ./cmd/migrate --action=up
+go run ./cmd/migrate --action=down
+go run ./cmd/migrate --action=status
 
-The [/other](/other/) folder contains other resources - e.g, the course slides.
+
