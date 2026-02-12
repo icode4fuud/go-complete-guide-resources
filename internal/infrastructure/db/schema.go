@@ -11,123 +11,192 @@
 package db
 
 import (
-	"database/sql"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
-	"log"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 )
 
-type migration struct {
-	Version string
-	Path    string
+const migrationsDir = "../../internal/infrastructure/db/DDL"
+
+type Migration struct {
+	Version  string
+	UpPath   string
+	DownPath string
+	Checksum string
 }
 
 func RunMigrations() error {
-	if err := ensureMigrationsTable(); err != nil {
+	if err := ensureMigrationTable(); err != nil {
 		return err
 	}
 
-	applied, err := loadAppliedVersions()
+	migrations, err := discoverMigrations()
 	if err != nil {
 		return err
 	}
 
-	pending, err := discoverMigrations("../../internal/infrastructure/db/DDL")
+	applied, err := loadAppliedMigrations()
 	if err != nil {
 		return err
 	}
 
-	for _, m := range pending {
-		if applied[m.Version] {
+	for _, m := range migrations {
+		if _, ok := applied[m.Version]; ok {
+			// Already applied — verify checksum
+			if applied[m.Version] != m.Checksum {
+				return fmt.Errorf("checksum mismatch for migration %s", m.Version)
+			}
 			continue
 		}
 
-		log.Println("[DB] Applying migration:", m.Version, m.Path)
+		fmt.Println("[DB] Applying migration:", m.Version)
 
-		sqlBytes, err := os.ReadFile(m.Path)
+		sqlBytes, err := os.ReadFile(m.UpPath)
 		if err != nil {
-			return fmt.Errorf("read %s: %w", m.Path, err)
+			return fmt.Errorf("read %s: %w", m.UpPath, err)
 		}
 
 		if _, err := DB.Exec(string(sqlBytes)); err != nil {
-			return fmt.Errorf("exec %s: %w", m.Path, err)
+			return fmt.Errorf("exec %s: %w", m.UpPath, err)
 		}
 
-		if err := recordMigration(m.Version); err != nil {
+		if err := recordMigration(m.Version, m.Checksum); err != nil {
 			return err
 		}
+
+		fmt.Println("[DB] Migration applied:", m.Version)
 	}
 
 	return nil
 }
 
-func ensureMigrationsTable() error {
+func ensureMigrationTable() error {
 	_, err := DB.Exec(`
         CREATE TABLE IF NOT EXISTS schema_migrations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            version TEXT NOT NULL UNIQUE,
+            version TEXT PRIMARY KEY,
+            checksum TEXT NOT NULL,
             applied_at TEXT NOT NULL
         );
     `)
 	return err
 }
 
-func loadAppliedVersions() (map[string]bool, error) {
-	rows, err := DB.Query(`SELECT version FROM schema_migrations`)
+func discoverMigrations() ([]Migration, error) {
+	files, err := ioutil.ReadDir(migrationsDir)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return map[string]bool{}, nil
+		return nil, err
+	}
+
+	upFiles := map[string]string{}
+	downFiles := map[string]string{}
+
+	for _, f := range files {
+		name := f.Name()
+		if strings.HasSuffix(name, ".up.sql") {
+			version := strings.TrimSuffix(name, ".up.sql")
+			upFiles[version] = filepath.Join(migrationsDir, name)
 		}
+		if strings.HasSuffix(name, ".down.sql") {
+			version := strings.TrimSuffix(name, ".down.sql")
+			downFiles[version] = filepath.Join(migrationsDir, name)
+		}
+	}
+
+	var migrations []Migration
+	for version, up := range upFiles {
+		down := downFiles[version]
+
+		checksum, err := computeChecksum(up)
+		if err != nil {
+			return nil, err
+		}
+
+		migrations = append(migrations, Migration{
+			Version:  version,
+			UpPath:   up,
+			DownPath: down,
+			Checksum: checksum,
+		})
+	}
+
+	sort.Slice(migrations, func(i, j int) bool {
+		return migrations[i].Version < migrations[j].Version
+	})
+
+	return migrations, nil
+}
+
+func computeChecksum(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:]), nil
+}
+
+func loadAppliedMigrations() (map[string]string, error) {
+	rows, err := DB.Query(`SELECT version, checksum FROM schema_migrations`)
+	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	m := make(map[string]bool)
+	applied := map[string]string{}
 	for rows.Next() {
-		var v string
-		if err := rows.Scan(&v); err != nil {
+		var version, checksum string
+		if err := rows.Scan(&version, &checksum); err != nil {
 			return nil, err
 		}
-		m[v] = true
+		applied[version] = checksum
 	}
-	return m, rows.Err()
+	return applied, nil
 }
 
-func discoverMigrations(dir string) ([]migration, error) {
-	entries, err := os.ReadDir(dir)
+func recordMigration(version, checksum string) error {
+	_, err := DB.Exec(`
+        INSERT INTO schema_migrations (version, checksum, applied_at)
+        VALUES (?, ?, ?)
+    `, version, checksum, time.Now().Format(time.RFC3339))
+	return err
+}
+
+func RollbackLastMigration() error {
+	rows, err := DB.Query(`
+        SELECT version FROM schema_migrations
+        ORDER BY applied_at DESC LIMIT 1
+    `)
 	if err != nil {
-		return nil, err
+		return err
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		return fmt.Errorf("no migrations to rollback")
 	}
 
-	var ms []migration
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		name := e.Name()
-		// e.g. "001_init.sql" → version "001_init"
-		version := name[:len(name)-len(filepath.Ext(name))]
-		ms = append(ms, migration{
-			Version: version,
-			Path:    filepath.Join(dir, name),
-		})
+	var version string
+	if err := rows.Scan(&version); err != nil {
+		return err
 	}
 
-	sort.Slice(ms, func(i, j int) bool {
-		return ms[i].Version < ms[j].Version
-	})
+	downPath := filepath.Join(migrationsDir, version+".down.sql")
 
-	return ms, nil
-}
+	sqlBytes, err := os.ReadFile(downPath)
+	if err != nil {
+		return fmt.Errorf("read %s: %w", downPath, err)
+	}
 
-func recordMigration(version string) error {
-	_, err := DB.Exec(
-		`INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)`,
-		version,
-		time.Now().Format(time.RFC3339),
-	)
+	if _, err := DB.Exec(string(sqlBytes)); err != nil {
+		return fmt.Errorf("exec %s: %w", downPath, err)
+	}
+
+	_, err = DB.Exec(`DELETE FROM schema_migrations WHERE version = ?`, version)
 	return err
 }

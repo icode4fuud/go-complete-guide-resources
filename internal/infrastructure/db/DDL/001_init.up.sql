@@ -1,3 +1,11 @@
+-- Create migration tracking table
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version TEXT PRIMARY KEY,
+    checksum TEXT NOT NULL,
+    applied_at TEXT NOT NULL
+);
+
+-- Create events table
 CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -5,10 +13,4 @@ CREATE TABLE IF NOT EXISTS events (
     location TEXT NOT NULL,
     description TEXT NOT NULL,
     user_id INTEGER NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS schema_migrations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    version TEXT NOT NULL UNIQUE,
-    applied_at TEXT NOT NULL
 );
