@@ -36,6 +36,13 @@ func (s *service) CreateEvent(e *Event) error {
 	if e.Name == "" {
 		return ErrInvalidEvent
 	}
+	if e.Location == "" { // added validation equivalent to FluentValidations
+		return ErrInvalidEvent
+	}
+	// if e.DateTime.IsZero() {
+	// 	return ErrInvalidEvent
+	// }
+
 	return s.repo.Create(e)
 }
 
