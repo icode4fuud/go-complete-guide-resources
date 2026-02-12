@@ -1,3 +1,7 @@
+// Why this is great
+// You can add validation, authorization, transformations, etc.
+// You can swap repos (e.g., mock repo for tests).
+// Handlers stay tiny.
 package events
 
 type Repository interface {
