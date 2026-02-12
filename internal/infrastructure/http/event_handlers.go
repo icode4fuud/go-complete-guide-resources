@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"ig4llc.com/internal/domain/events"
+	"ig4llc.com/internal/infrastructure/http/middleware"
 )
 
 const baseuri = "/events"
@@ -21,6 +22,10 @@ func NewEventHandler(svc events.Service) *EventHandler {
 }
 
 func (h *EventHandler) RegisterRoutes(r *gin.Engine) {
+	//register authentication middleware
+	api := r.Group(baseuri)
+	api.Use(middleware.AuthRequired())
+
 	r.GET(baseuri, h.getEvents)
 	r.GET(baseuri2, h.getEvent)
 	r.POST(baseuri, h.createEvent)
@@ -32,20 +37,28 @@ func (h *EventHandler) RegisterRoutes(r *gin.Engine) {
 
 // handler implementation
 func (h *EventHandler) getEvents(c *gin.Context) {
-	events, err := h.svc.GetAllEvents()
+	eventz, err := h.svc.GetAllEvents()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to retrieve events"})
 		return
 	}
 
-	c.JSON(http.StatusOK, events)
+	c.JSON(http.StatusOK, eventz)
 }
 
 func (h *EventHandler) getEvent(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid event ID"})
+		//use Error Mapping to errors.go
+		switch err {
+		case events.ErrEventNotFound:
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case events.ErrInvalidEvent:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		}
 		return
 	}
 
