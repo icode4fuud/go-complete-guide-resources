@@ -1,28 +1,16 @@
-// Why this schema.go better:
-// You can add more migration files later
-// They run in order
-// You get clear logs
-// Errors are descriptive
-// Versioned migrations
-//Name files like:
-//DDL/001_init.sql
-//DDL/002_add_index_on_events_datetime.sql
-
 package db
 
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 )
-
-const migrationsDir = "../../internal/infrastructure/db/DDL"
 
 type Migration struct {
 	Version  string
@@ -31,12 +19,55 @@ type Migration struct {
 	Checksum string
 }
 
+// ------------------------------------------------------------
+// 1. Locate project root dynamically (bulletproof path resolver)
+// ------------------------------------------------------------
+func findProjectRoot() (string, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	// Walk upward until we find the internal/ folder
+	for i := 0; i < 10; i++ {
+		try := filepath.Join(wd, "internal")
+		if stat, err := os.Stat(try); err == nil && stat.IsDir() {
+			return wd, nil
+		}
+		wd = filepath.Dir(wd)
+	}
+
+	return "", errors.New("could not locate project root (missing internal/ folder)")
+}
+
+func migrationsDir() (string, error) {
+	root, err := findProjectRoot()
+	if err != nil {
+		return "", err
+	}
+
+	dir := filepath.Join(root, "internal", "infrastructure", "db", "DDL")
+	if _, err := os.Stat(dir); err != nil {
+		return "", fmt.Errorf("migrations directory not found: %s", dir)
+	}
+
+	return dir, nil
+}
+
+// ------------------------------------------------------------
+// 2. Run migrations
+// ------------------------------------------------------------
 func RunMigrations() error {
 	if err := ensureMigrationTable(); err != nil {
 		return err
 	}
 
-	migrations, err := discoverMigrations()
+	dir, err := migrationsDir()
+	if err != nil {
+		return err
+	}
+
+	migrations, err := discoverMigrations(dir)
 	if err != nil {
 		return err
 	}
@@ -48,7 +79,6 @@ func RunMigrations() error {
 
 	for _, m := range migrations {
 		if _, ok := applied[m.Version]; ok {
-			// Already applied — verify checksum
 			if applied[m.Version] != m.Checksum {
 				return fmt.Errorf("checksum mismatch for migration %s", m.Version)
 			}
@@ -76,19 +106,11 @@ func RunMigrations() error {
 	return nil
 }
 
-func ensureMigrationTable() error {
-	_, err := DB.Exec(`
-        CREATE TABLE IF NOT EXISTS schema_migrations (
-            version TEXT PRIMARY KEY,
-            checksum TEXT NOT NULL,
-            applied_at TEXT NOT NULL
-        );
-    `)
-	return err
-}
-
-func discoverMigrations() ([]Migration, error) {
-	files, err := ioutil.ReadDir(migrationsDir)
+// ------------------------------------------------------------
+// 3. Discover migrations
+// ------------------------------------------------------------
+func discoverMigrations(dir string) ([]Migration, error) {
+	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
@@ -96,15 +118,15 @@ func discoverMigrations() ([]Migration, error) {
 	upFiles := map[string]string{}
 	downFiles := map[string]string{}
 
-	for _, f := range files {
+	for _, f := range entries {
 		name := f.Name()
 		if strings.HasSuffix(name, ".up.sql") {
 			version := strings.TrimSuffix(name, ".up.sql")
-			upFiles[version] = filepath.Join(migrationsDir, name)
+			upFiles[version] = filepath.Join(dir, name)
 		}
 		if strings.HasSuffix(name, ".down.sql") {
 			version := strings.TrimSuffix(name, ".down.sql")
-			downFiles[version] = filepath.Join(migrationsDir, name)
+			downFiles[version] = filepath.Join(dir, name)
 		}
 	}
 
@@ -132,6 +154,9 @@ func discoverMigrations() ([]Migration, error) {
 	return migrations, nil
 }
 
+// ------------------------------------------------------------
+// 4. Checksum
+// ------------------------------------------------------------
 func computeChecksum(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -139,6 +164,20 @@ func computeChecksum(path string) (string, error) {
 	}
 	sum := sha256.Sum256(data)
 	return hex.EncodeToString(sum[:]), nil
+}
+
+// ------------------------------------------------------------
+// 5. Migration table
+// ------------------------------------------------------------
+func ensureMigrationTable() error {
+	_, err := DB.Exec(`
+        CREATE TABLE IF NOT EXISTS schema_migrations (
+            version TEXT PRIMARY KEY,
+            checksum TEXT NOT NULL,
+            applied_at TEXT NOT NULL
+        );
+    `)
+	return err
 }
 
 func loadAppliedMigrations() (map[string]string, error) {
@@ -167,6 +206,9 @@ func recordMigration(version, checksum string) error {
 	return err
 }
 
+// ------------------------------------------------------------
+// 6. Rollback
+// ------------------------------------------------------------
 func RollbackLastMigration() error {
 	rows, err := DB.Query(`
         SELECT version FROM schema_migrations
@@ -186,7 +228,12 @@ func RollbackLastMigration() error {
 		return err
 	}
 
-	downPath := filepath.Join(migrationsDir, version+".down.sql")
+	dir, err := migrationsDir()
+	if err != nil {
+		return err
+	}
+
+	downPath := filepath.Join(dir, version+".down.sql")
 
 	sqlBytes, err := os.ReadFile(downPath)
 	if err != nil {
@@ -199,4 +246,30 @@ func RollbackLastMigration() error {
 
 	_, err = DB.Exec(`DELETE FROM schema_migrations WHERE version = ?`, version)
 	return err
+}
+
+// ------------------------------------------------------------
+// 7. Status
+// ------------------------------------------------------------
+func PrintMigrationStatus() error {
+	rows, err := DB.Query(`
+        SELECT version, applied_at
+        FROM schema_migrations
+        ORDER BY version
+    `)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	fmt.Println("Applied migrations:")
+	for rows.Next() {
+		var version, appliedAt string
+		if err := rows.Scan(&version, &appliedAt); err != nil {
+			return err
+		}
+		fmt.Printf("  %s  (%s)\n", version, appliedAt)
+	}
+
+	return nil
 }
