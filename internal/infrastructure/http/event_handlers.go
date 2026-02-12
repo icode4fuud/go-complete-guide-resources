@@ -9,6 +9,8 @@ import (
 )
 
 const baseuri = "/events"
+const baseuri2 = "/events/:id"
+const baseuri3 = "/events/:id/register"
 
 type EventHandler struct {
 	svc events.Service
@@ -20,12 +22,12 @@ func NewEventHandler(svc events.Service) *EventHandler {
 
 func (h *EventHandler) RegisterRoutes(r *gin.Engine) {
 	r.GET(baseuri, h.getEvents)
-	r.GET("/events/:id", h.getEvent)
-	r.POST("/events", h.createEvent)
-	r.PUT("/events/:id", h.updateEvent)
-	r.DELETE("/events/:id", h.deleteEvent)
-	r.POST("/events/:id/register", h.register)
-	r.DELETE("/events/:id/register", h.unregister)
+	r.GET(baseuri2, h.getEvent)
+	r.POST(baseuri, h.createEvent)
+	r.PUT(baseuri2, h.updateEvent)
+	r.DELETE(baseuri2, h.deleteEvent)
+	r.POST(baseuri3, h.register)
+	r.DELETE(baseuri3, h.unregister)
 }
 
 // handler implementation
