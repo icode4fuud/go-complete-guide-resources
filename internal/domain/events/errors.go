@@ -3,6 +3,8 @@ package events
 import "errors"
 
 var (
-	ErrEventNotFound = errors.New("event not found")
-	ErrInvalidEvent  = errors.New("invalid event data")
+	ErrEventNotFound = errors.New("Event not found")
+	ErrInvalidEvent  = errors.New("Invalid event data")
+	// ErrInvalidEventID = errors.New("Invalid event ID")
+	// ErrDMLFailed      = errors.New("Database persistence failed!")
 )
