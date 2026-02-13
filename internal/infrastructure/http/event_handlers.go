@@ -52,6 +52,10 @@ func (h *EventHandler) mapErrorToResponse(c *gin.Context, err error, defaultMsg 
 	case events.ErrEventNotFound:
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 	// Add other domain errors here as you create them
+	case events.ErrUnauthorized:
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+	case events.ErrForbidden:
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 	default:
 		c.JSON(http.StatusInternalServerError, gin.H{"message": defaultMsg})
 	}
@@ -163,12 +167,15 @@ func (h *EventHandler) register(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid event ID"})
+		h.mapErrorToResponse(c, events.ErrInvalidEvent, "Invalid ID")
 		return
 	}
 
-	if err := h.svc.RegisterUser(id, 1); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+	// In the future, you'll get this ID from your Auth middleware/JWT context
+	currentUserID := 1
+
+	if err := h.svc.RegisterUser(id, currentUserID); err != nil {
+		h.mapErrorToResponse(c, err, "Could not register user for event")
 		return
 	}
 
