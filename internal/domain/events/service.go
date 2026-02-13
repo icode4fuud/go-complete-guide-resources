@@ -4,6 +4,13 @@
 // Handlers stay tiny.
 package events
 
+import (
+	"strings"
+
+	//"ig4llc.com/internal/infrastructure/cache"
+	"ig4llc.com/internal/infrastructure/logging"
+)
+
 type Repository interface {
 	Create(e *Event) error
 	GetAll() ([]Event, error)
@@ -26,6 +33,7 @@ type Service interface {
 
 type service struct {
 	repo Repository
+	//cache *cache.EventsCache
 }
 
 func NewService(repo Repository) Service {
@@ -33,15 +41,19 @@ func NewService(repo Repository) Service {
 }
 
 func (s *service) CreateEvent(e *Event) error {
-	if e.Name == "" {
+	if strings.TrimSpace(e.Name) == "" { // (tightened validation)Handlers stay thin; they just bind DTO → domain and map errors
 		return ErrInvalidEvent
 	}
-	if e.Location == "" { // added validation equivalent to FluentValidations
+	if strings.TrimSpace(e.Location) == "" { // added validation equivalent to FluentValidations
 		return ErrInvalidEvent
 	}
-	// if e.DateTime.IsZero() {
-	// 	return ErrInvalidEvent
-	// }
+	if e.DateTime.IsZero() {
+		logging.Logger.Printf("method: service.CreateEvent e.DateTime is zero: DateTime=%s", e.DateTime.String())
+		return ErrInvalidEvent
+	}
+
+	//test logger
+	logging.Logger.Printf("method: service.CreateEvent creating event: user=%d name=%s", e.UserID, e.Name)
 
 	return s.repo.Create(e)
 }
@@ -69,3 +81,22 @@ func (s *service) RegisterUser(eventID int64, userID int) error {
 func (s *service) UnregisterUser(eventID int64, userID int) error {
 	return s.repo.Unregister(eventID, userID)
 }
+
+// func (s *service) ListEvents(page, pageSize int, sortBy, order string, userID *int) ([]Event, error) {
+// 	if userID == nil && page == 1 && sortBy == "datetime" && strings.ToLower(order) == "desc" {
+// 		if data, ok := s.cache.Get(); ok {
+// 			return data, nil
+// 		}
+// 	}
+
+// 	events, err := s.repo.List(page, pageSize, sortBy, order, userID)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	if userID == nil && page == 1 && sortBy == "datetime" && strings.ToLower(order) == "desc" {
+// 		s.cache.Set(events)
+// 	}
+
+// 	return events, nil
+// }
