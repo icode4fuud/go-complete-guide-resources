@@ -89,6 +89,8 @@ func (h *EventHandler) getEvent(c *gin.Context) {
 	c.JSON(http.StatusOK, event)
 }
 
+// You should also update your createEvent handler so that the UserID in the domain model comes from the authenticated session,
+// not just the JSON payload. This prevents users from "impersonating" other user IDs in the request body.
 func (h *EventHandler) createEvent(c *gin.Context) {
 	var req dto.CreateEventRequest // init DTO
 	//var event events.Event
@@ -96,9 +98,26 @@ func (h *EventHandler) createEvent(c *gin.Context) {
 	// 1. Bind JSON directly to the DTO
 	// If "dateTime" is missing or invalid in the JSON, this will return an error automatically.
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logging.Logger.Printf("JSON binding failed: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body", "error": err.Error()})
 		return
+	}
+
+	// 1. Safely retrieve userID from context
+	val, exists := c.Get("userId")
+	var finalUserID int64
+
+	if !exists {
+		// Fallback for development until Auth is implemented
+		logging.Logger.Println("Auth not yet implemented: using default userID 1")
+		finalUserID = 1
+	} else {
+		// 2. Safely assert type
+		id, ok := val.(int64)
+		if !ok {
+			h.mapErrorToResponse(c, events.ErrUnauthorized, "Invalid user session")
+			return
+		}
+		finalUserID = id
 	}
 
 	//add logic for DTO+clean response
@@ -110,7 +129,7 @@ func (h *EventHandler) createEvent(c *gin.Context) {
 		DateTime:    req.DateTime,
 		Location:    req.Location,
 		Description: req.Description,
-		UserID:      req.UserID,
+		UserID:      int64(finalUserID),
 	}
 
 	//3, pass to the service
@@ -172,9 +191,17 @@ func (h *EventHandler) register(c *gin.Context) {
 	}
 
 	// In the future, you'll get this ID from your Auth middleware/JWT context
-	currentUserID := 1
+	//currentUserID := 1
+	//Now retrieving from the middleware.AuthRequired()
+	// Retrieve the userID set by the AuthRequired middleware
+	// We use c.Get() and type assert it to an int
+	userID, exists := c.Get("userId")
+	if !exists {
+		h.mapErrorToResponse(c, events.ErrUnauthorized, "User context not found")
+		return
+	}
 
-	if err := h.svc.RegisterUser(id, currentUserID); err != nil {
+	if err := h.svc.RegisterUser(id, userID.(int)); err != nil {
 		h.mapErrorToResponse(c, err, "Could not register user for event")
 		return
 	}
