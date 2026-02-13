@@ -40,6 +40,23 @@ func (h *EventHandler) RegisterRoutes(r *gin.Engine) {
 	r.DELETE(baseuri3, h.unregister)
 }
 
+// helper function for error mapping
+// Use this to swap the repetitive switch logic and manual c.JSON calls
+func (h *EventHandler) mapErrorToResponse(c *gin.Context, err error, defaultMsg string) {
+	// Log the actual error for internal debugging
+	logging.Logger.Printf("Error occurred: %v", err)
+
+	switch err {
+	case events.ErrInvalidEvent:
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	case events.ErrEventNotFound:
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+	// Add other domain errors here as you create them
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"message": defaultMsg})
+	}
+}
+
 // handler implementation
 func (h *EventHandler) getEvents(c *gin.Context) {
 	eventz, err := h.svc.GetAllEvents()
@@ -55,21 +72,13 @@ func (h *EventHandler) getEvent(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		//use Error Mapping to errors.go
-		switch err {
-		case events.ErrEventNotFound:
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		case events.ErrInvalidEvent:
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
-		}
+		h.mapErrorToResponse(c, events.ErrInvalidEvent, "Invalid event ID") //[cite: 1]
 		return
 	}
 
 	event, err := h.svc.GetEventByID(id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"message": "Event not found"})
+		h.mapErrorToResponse(c, err, "Event not found") //[cite: 1]
 		return
 	}
 
@@ -102,12 +111,7 @@ func (h *EventHandler) createEvent(c *gin.Context) {
 
 	//3, pass to the service
 	if err := h.svc.CreateEvent(ev); err != nil { //[cite: 1]
-		switch err {
-		case events.ErrInvalidEvent:
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		default:
-			c.JSON(http.StatusBadRequest, gin.H{"message": "Failed to INSERT INTO database!"})
-		}
+		h.mapErrorToResponse(c, err, "Failed to insert into database")
 		return
 	}
 
@@ -120,7 +124,7 @@ func (h *EventHandler) updateEvent(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid event ID"})
+		h.mapErrorToResponse(c, events.ErrInvalidEvent, "Invalid ID format") //[cite: 1]
 		return
 	}
 
@@ -129,11 +133,10 @@ func (h *EventHandler) updateEvent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid event payload"})
 		return
 	}
-
 	event.ID = id
 
 	if err := h.svc.UpdateEvent(&event); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		h.mapErrorToResponse(c, err, "Failed to update event in database") //[cite: 1]
 		return
 	}
 
@@ -144,12 +147,12 @@ func (h *EventHandler) deleteEvent(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid event ID"})
+		h.mapErrorToResponse(c, events.ErrInvalidEvent, "Invalid ID format") //[cite: 1]
 		return
 	}
 
 	if err := h.svc.DeleteEvent(id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		h.mapErrorToResponse(c, err, "Failed to delete event") //[cite: 1]
 		return
 	}
 
