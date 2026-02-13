@@ -3,10 +3,14 @@ package http
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"ig4llc.com/internal/domain/events"
+	"ig4llc.com/internal/infrastructure/http/dto"
 	"ig4llc.com/internal/infrastructure/http/middleware"
+	"ig4llc.com/internal/infrastructure/logging"
+	//"ig4llc.com/internal/infrastructure/logging"
 )
 
 const baseuri = "/events"
@@ -25,6 +29,7 @@ func (h *EventHandler) RegisterRoutes(r *gin.Engine) {
 	//register authentication middleware
 	api := r.Group(baseuri)
 	api.Use(middleware.AuthRequired())
+	api.Use(middleware.RateLimit(50, time.Minute)) // register rate limiting middleware
 
 	r.GET(baseuri, h.getEvents)
 	r.GET(baseuri2, h.getEvent)
@@ -72,23 +77,42 @@ func (h *EventHandler) getEvent(c *gin.Context) {
 }
 
 func (h *EventHandler) createEvent(c *gin.Context) {
-	var event events.Event
-	if err := c.ShouldBindJSON(&event); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
+	var req dto.CreateEventRequest // init DTO
+	//var event events.Event
+
+	// 1. Bind JSON directly to the DTO
+	// If "dateTime" is missing or invalid in the JSON, this will return an error automatically.
+	if err := c.ShouldBindJSON(&req); err != nil {
+		logging.Logger.Printf("JSON binding failed: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body", "error": err.Error()})
 		return
 	}
 
-	if err := h.svc.CreateEvent(&event); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Failed to INSERT INTO database!"})
+	//add logic for DTO+clean response
+	// 2. Map DTO to Domain Model
+	// Because req.DateTime is now a time.Time, no manual time.Parse is needed.
+	//logging.Logger.Printf("ev := &events.Event is executing: dateTime=%s", req.DateTime.String())
+	ev := &events.Event{
+		Name:        req.Name,
+		DateTime:    req.DateTime,
+		Location:    req.Location,
+		Description: req.Description,
+		UserID:      req.UserID,
+	}
+
+	//3, pass to the service
+	if err := h.svc.CreateEvent(ev); err != nil { //[cite: 1]
+		switch err {
+		case events.ErrInvalidEvent:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Failed to INSERT INTO database!"})
+		}
 		return
 	}
 
-	// if err != nil {
-	// 	c.JSON(http.StatusBadRequest, gin.H{"message": "Could not create event. Try again later."}) //err.Error()
-	// 	return
-	// }
-
-	c.JSON(http.StatusCreated, gin.H{"message": "Event created", "event": event})
+	//c.JSON(http.StatusCreated, gin.H{"message": "Event created", "event": event})
+	c.JSON(http.StatusCreated, dto.ToEventResponse(ev)) //return DTO ToEventResponse
 
 }
 

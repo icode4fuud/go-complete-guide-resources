@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 
+	"ig4llc.com/internal/infrastructure/logging"
+
 	"github.com/gin-gonic/gin"
 	"ig4llc.com/internal/domain/events"
 	"ig4llc.com/internal/infrastructure/db"
@@ -13,6 +15,8 @@ import (
 )
 
 func main() {
+	logging.Logger.Println("Starting server...")
+
 	if err := db.InitDB(); err != nil {
 		log.Fatal("DB init failed:", err)
 	}
